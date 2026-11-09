@@ -1,0 +1,14 @@
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then export PIP_CERT=/run/secrets/proxy_ca; fi; \
+    pip install --no-cache-dir -r requirements.txt
+COPY app app
+COPY scripts scripts
+COPY migrations migrations
+COPY alembic.ini .
+RUN useradd -m terminal && mkdir /data && chown terminal /data && chown -R terminal:terminal /app
+ENV DATABASE_URL=sqlite:////data/terminal.db
+USER terminal
+CMD ["sh","-c","alembic upgrade head && python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"]

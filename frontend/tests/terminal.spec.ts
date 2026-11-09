@@ -1,0 +1,26 @@
+import {test,expect} from "@playwright/test";
+import fs from "node:fs";
+test("authenticated terminal and working controls",async({page})=>{
+const errors:string[]=[];page.on("pageerror",e=>errors.push(e.message));
+await page.goto("http://localhost:3000");
+await page.getByLabel("Username").fill("browser-test");
+await page.getByLabel("Password").fill(fs.readFileSync("/tmp/forex-browser-password","utf8"));
+await page.getByRole("button",{name:"Enter terminal"}).click();
+await expect(page.getByRole("heading",{name:"Overview",exact:true})).toBeVisible();
+await expect(page.getByText("$10,000.00").first()).toBeVisible();
+await page.screenshot({path:"../artifacts/overview.png",fullPage:true});
+await page.getByRole("button",{name:"Risk Management"}).click();
+await page.getByLabel("risk pct",{exact:true}).fill("0.4");
+await page.getByRole("button",{name:"Save configuration"}).click();
+await expect(page.getByRole("status")).toHaveText("Configuration saved");
+await page.getByRole("button",{name:"Resume engine"}).click();
+await expect(page.getByRole("button",{name:"Pause engine"})).toBeVisible();
+await page.getByRole("button",{name:"Pause engine"}).click();
+await page.getByRole("button",{name:"Market Scanner"}).click();
+await page.getByRole("button",{name:"Scan imported candles"}).click();
+await expect(page.locator("p.error")).toContainText("Import real M1 CSV first");
+await page.setViewportSize({width:390,height:844});
+await page.getByRole("button",{name:"Overview",exact:false}).first().click();
+await page.screenshot({path:"../artifacts/mobile.png",fullPage:true});
+expect(errors).toEqual([]);
+});

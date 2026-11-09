@@ -1,0 +1,24 @@
+FROM node:22-alpine AS frontend
+WORKDIR /build
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend .
+ENV STATIC_EXPORT=true
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build
+
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY app app
+COPY migrations migrations
+COPY alembic.ini .
+COPY scripts scripts
+COPY --from=frontend /build/out /app/public
+RUN useradd -m terminal && mkdir /data && chown -R terminal:terminal /app /data
+ENV DATABASE_URL=sqlite:////data/demo.db
+ENV SERVE_FRONTEND_DIR=/app/public
+ENV COOKIE_SECURE=true
+USER terminal
+CMD ["sh","-c","alembic upgrade head && python -m scripts.bootstrap_demo && exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
