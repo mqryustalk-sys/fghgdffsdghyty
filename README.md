@@ -1,0 +1,1 @@
+# Northstar FX\n\nEUR/USD paper-trading research terminal. Live trading disabled.\n
